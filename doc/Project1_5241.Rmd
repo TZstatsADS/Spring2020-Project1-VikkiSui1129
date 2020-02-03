@@ -1,0 +1,77 @@
+---
+title: "Project1_5241"
+author: "Vikki Sui"
+date: "2020/2/2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load data, warning=FALSE, message=FALSE}
+# load lyrics data
+load('../output/processed_lyrics.RData') 
+# load artist information
+dt_artist <- fread('../data/artists.csv') 
+
+lyrics_list <- c("Folk", "R&B", "Electronic", "Jazz", "Indie", "Country", "Rock", "Metal", "Pop", "Hip-Hop", "Other")
+time_list <- c("1970s", "1980s", "1990s", "2000s", "2010s")
+corpus <- VCorpus(VectorSource(dt_lyrics$stemmedwords))
+word_tibble <- tidy(corpus) %>%
+  select(text) %>%
+  mutate(id = row_number()) %>%
+  unnest_tokens(word, text)
+#View(dt_lyrics)
+```
+
+Question 1: Does the length of word related to the type of music?
+```{r}
+t1<-word_tibble %>% 
+  mutate(n = nchar(word)) %>% 
+  group_by(id) %>% 
+  mutate(meanlen = mean(n)) %>%
+  select(id, meanlen) %>%
+  unique()
+t2<- dt_lyrics %>% left_join(t1, by = "id")
+t3<-t2 %>% group_by(genre) %>%
+  mutate(meanlenfortype = mean(meanlen, na.rm = TRUE)) %>%
+  select(genre, meanlenfortype) %>%
+  unique() %>%
+  arrange(meanlenfortype)
+meanlen = mean(t3$meanlenfortype)
+varlen = var(t3$meanlenfortype)
+t3 %>%
+  mutate(k = (meanlenfortype-meanlen)/varlen) %>%
+  arrange(k) %>%
+  ggplot(aes(x = genre, y = k)) +
+  geom_point()
+```
+
+Question 2: 
+```{r}
+View(dt_lyrics)
+View(word_tibble)
+
+t4<-word_tibble %>% 
+  group_by(id) %>%
+  summarise(count = n())
+t5<-word_tibble %>% 
+  mutate(loveyes = 0) %>%
+  filter(word =="love") %>%
+  mutate(loveyes = 1) %>%
+  group_by(id) %>%
+  summarise(count = n())
+t6<-t4 %>% left_join(t5, by = "id")
+t7<-dt_lyrics %>% 
+  left_join(t6, by = "id") %>%
+  group_by(genre) %>%
+  summarise(n1 = sum(count.x, na.rm = TRUE), n2 = sum(count.y, na.rm = TRUE)) %>%
+  mutate(freq = n2/n1)
+t7 %>%
+  ggplot(aes(x = genre, y = freq)) +
+  geom_point()
+```
+
+
+
