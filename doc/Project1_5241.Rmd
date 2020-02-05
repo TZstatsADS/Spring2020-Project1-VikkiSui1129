@@ -9,7 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-![](/Users/apple/Documents/GitHub/Spring2020-Project1-VikkiSui1129/figs/title1.jpeg) 
+
+![](/Users/apple/Documents/GitHub/Spring2020-Project1-VikkiSui1129/figs/title1.jpeg){.center}
 
 
 ## Project Summary
@@ -20,6 +21,7 @@ This report is prepared with the following environmental settings.
 print(R.version)
 ```
 
+***
 ## Data cleaning
 We did the data cleaning in Text.Processing.Rmd and got two cleaned data called dt_lyrics and dt_artist. We will use these two data set to do furthur analysis. Since I am more concerned with the relationship of songs and years, so I will stick with the dt_lyrics dataset in this report.
 
@@ -65,6 +67,7 @@ df <- dt_lyrics %>%
   filter(year>1965)
 ```
 
+***
 ## Number of songs along years
 ```{r, echo = FALSE}
 df %>% group_by(genre, year) %>%
@@ -83,6 +86,7 @@ df1 <- df %>%
                           include.lowest = TRUE))
 ```
 
+***
 ## Proportion of each genre in different time periods
 ```{r, echo = FALSE}
 test1<-df1 %>%
@@ -111,9 +115,10 @@ pie(test2$freq, test2$genre, main = "climax", col = rainbow(length(test2$genre))
 pie(test3$freq, test3$genre, main = "stable", col = rainbow(length(test3$genre)))
 ```
 
-From the pie chart, we can see that the proportion for different genre did not change a lot from pre to climax. However, from climax to stable, we can see a clear drop of proportion of Rock songs, and an obvious increase of Pop music proportion. 
+From the pie chart, we can see that from pre to climax, there is an increase of metal songs and unnoticeable decrease of other types, but all of these changes are relatively small. However, from climax to stable, we can see a clear drop of proportion of Rock songs, and an obvious increase of Pop music proportion. 
 
 
+***
 ## Question 1: Does the length of song(number of words in a song) and the length of the words(number of characters in the words) changed over these three time period?
 ```{r, echo = FALSE, warning = FALSE}
 word_tibble %>% 
@@ -141,6 +146,7 @@ word_tibble %>%
 From the plot, we can see that not only the length of songs decreased a little bit during the climax period, but also the length of word also decreased a little bit during the climax. A possible guess would be because there are two many songs been created those years, so the average time spent to each song by listener or writer will be decreased, so they tend to have shorted songs and relatively easy and shorter words in the song. 
 
 
+***
 ## Question2: What are the most frequently used words?
 ```{r,echo = FALSE, warning = FALSE}
 t1<-word_tibble %>% 
@@ -199,9 +205,16 @@ wordcloud(words = t4$word, freq = t2$n, min.freq = 1,
 
 We noticed that the highly frequent words are almost the same for the three time periods. However, if we take a look of slightly lower rank of frequency, we can see some change for the stable period which is closer to the current years. This might indicates that the mainly used words did not change a lot for over time period, but for more recent year, some uses of words has slightly changed, which cause the slight change of frequency and wordcloud. 
 
+
+***
 ## Question 3: Are the emotions expressed in the songs more positive or more negative?
 
 From the top 50 frequency words of each time period, I did a classification of those words based on the emotion they expressed. There are three types, positive emotion, negative emotion, and non-emotion, and we only care about the first two types in our projects. 
+
+The classification includes the following words:
+
+  + positive: love, baby, heart, friend
+  + negative: ill, cry, die, lie, hard, leave, fall, trouble
 
 ```{r, echo = FALSE, warning=FALSE}
 positive = c("love", "baby", "heart", "friend")
@@ -227,8 +240,10 @@ t5 %>%
 
 From the plot, we notice that in each time period, positive emotional words has a larger proportion than nagetive emotional words. This result matches the wordcloud we saw previously becase "love" always has the highest frequency and is classified as a positive emotional word. From the plot, we can also see that negative emotion takes a slightly larger proportion during the climax period. 
 
+
+***
 ## Summary
 
 Based on change of the number of songs, we separate the years into three period which is pre, climax, and stable. We notice that the proportion of each genre are different in these three time period. Then we find out that the length of the song and the length of words used in the climax period are relatively shorter than the other two period. Next, we can conclude that the highly frequent used words did not change along time, but for more recent years, some new words started to show up more which caused the slight different of wordcloud. Finally, from the emotional words perpective, we can see that positive emotions always play a more dominant role in songs but the rate of negative words did increased a little bit during the climax period.
 
-![](/Users/apple/Documents/GitHub/Spring2020-Project1-VikkiSui1129/figs/title.png) 
+![](/Users/apple/Documents/GitHub/Spring2020-Project1-VikkiSui1129/figs/title.png){.center}
