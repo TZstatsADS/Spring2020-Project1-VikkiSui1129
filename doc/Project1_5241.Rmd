@@ -1,5 +1,5 @@
 ---
-title: "Project1_5241"
+title: "What has changed over the years about music?"
 author: "Vikki Sui"
 date: "2020/2/2"
 output: html_document
@@ -9,69 +9,226 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r load data, warning=FALSE, message=FALSE}
+![](/Users/apple/Documents/GitHub/Spring2020-Project1-VikkiSui1129/figs/title1.jpeg) 
+
+
+## Project Summary
+We are given by a dataset of around 380,000+ lyrics on kaggle and you can read more about it on [Kaggle](https://www.kaggle.com/gyani95/380000-lyrics-from-metrolyrics). In this project, we aimed to find out what has changed over the years including the length of the songs, the length of words the songs use, frequently used words, and emotions in different time periods.
+
+This report is prepared with the following environmental settings.
+```{r}
+print(R.version)
+```
+
+## Data cleaning
+We did the data cleaning in Text.Processing.Rmd and got two cleaned data called dt_lyrics and dt_artist. We will use these two data set to do furthur analysis. Since I am more concerned with the relationship of songs and years, so I will stick with the dt_lyrics dataset in this report.
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+library(tm)
+library(data.table)
+library(tidytext)
+library(tidyverse)
+library(DT)
+library(tidyverse)
+library(tidytext)
+library(plotly)
+library(DT)
+library(tm)
+library(data.table)
+library(scales)
+library(wordcloud2)
+library(gridExtra)
+library(ngram)
+library(shiny)
+library("SnowballC")
+library("wordcloud")
+library("RColorBrewer")
+```
+
+
+```{r load data, warning=FALSE, message=FALSE, echo = FALSE}
 # load lyrics data
 load('../output/processed_lyrics.RData') 
 # load artist information
-dt_artist <- fread('../data/artists.csv') 
+#dt_artist <- fread('../data/artists.csv') 
 
-lyrics_list <- c("Folk", "R&B", "Electronic", "Jazz", "Indie", "Country", "Rock", "Metal", "Pop", "Hip-Hop", "Other")
-time_list <- c("1970s", "1980s", "1990s", "2000s", "2010s")
+#lyrics_list <- c("Folk", "R&B", "Electronic", "Jazz", "Indie", "Country", "Rock", "Metal", "Pop", "Hip-Hop", "Other")
+#time_list <- c("1970s", "1980s", "1990s", "2000s", "2010s")
+
+#create the corpus and clean out the outlier for years
 corpus <- VCorpus(VectorSource(dt_lyrics$stemmedwords))
 word_tibble <- tidy(corpus) %>%
   select(text) %>%
   mutate(id = row_number()) %>%
   unnest_tokens(word, text)
-#View(dt_lyrics)
+df <- dt_lyrics %>%
+  filter(year>1965)
 ```
 
-Question 1: Does the length of word related to the type of music?
-```{r}
+## Number of songs along years
+```{r, echo = FALSE}
+df %>% group_by(genre, year) %>%
+  summarise(number_of_songs = n()) %>%
+  ggplot() +
+  geom_bar(aes(x= year, y = number_of_songs, fill = genre), stat = "identity")
+```
+
+From this graph, we notice that the number of songs per year was pretty small and increased very slowly before 2005. In the two years starting from 2006, the number of songs suddenly increased and reached its climax. Then starting from 2008, the number of songs per year fell back to the relatively stable state with a middle number of songs comparing to the previous two time period. So we classified the time lines into three periods: 1968-2005 is called "pre", 2006-2007 is called "climax", 2008-later is called "stable". All the analysis later will be based on these three time periods.
+
+```{r, echo = FALSE}
+df1 <- df %>%
+  mutate(year_level = cut(year,
+                          breaks = c(min(year), 2005, 2007, max(year)),
+                          labels = c("pre", "climax", "stable"),
+                          include.lowest = TRUE))
+```
+
+## Proportion of each genre in different time periods
+```{r, echo = FALSE}
+test1<-df1 %>%
+  group_by(year_level, genre) %>%
+  summarise(count = n()) %>%
+  ungroup() %>%
+  group_by(year_level) %>%
+  mutate(freq = count/sum(count)) %>%
+  filter(year_level == "pre")
+test2<-df1 %>%
+  group_by(year_level, genre) %>%
+  summarise(count = n()) %>%
+  ungroup() %>%
+  group_by(year_level) %>%
+  mutate(freq = count/sum(count)) %>%
+  filter(year_level == "climax")
+test3<-df1 %>%
+  group_by(year_level, genre) %>%
+  summarise(count = n()) %>%
+  ungroup() %>%
+  group_by(year_level) %>%
+  mutate(freq = count/sum(count)) %>%
+  filter(year_level == "stable")
+pie(test1$freq, test1$genre, main = "pre", col = rainbow(length(test1$genre)))
+pie(test2$freq, test2$genre, main = "climax", col = rainbow(length(test2$genre)))
+pie(test3$freq, test3$genre, main = "stable", col = rainbow(length(test3$genre)))
+```
+
+From the pie chart, we can see that the proportion for different genre did not change a lot from pre to climax. However, from climax to stable, we can see a clear drop of proportion of Rock songs, and an obvious increase of Pop music proportion. 
+
+
+## Question 1: Does the length of song(number of words in a song) and the length of the words(number of characters in the words) changed over these three time period?
+```{r, echo = FALSE, warning = FALSE}
+word_tibble %>% 
+  group_by(id) %>%
+  summarise(count = n()) %>%
+  left_join(df1, by = "id") %>%
+  group_by(year_level, genre) %>%
+  summarise(meanlensong = mean(count)) %>%
+  ggplot() +
+  geom_bar(aes(x = year_level, y = meanlensong, fill = genre), stat = "identity")
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+word_tibble %>% 
+  group_by(id) %>%
+  summarise(count = mean(nchar(word))) %>%
+  left_join(df1, by = "id") %>%
+  group_by(year_level, genre) %>%
+  summarise(meanlenword = mean(count)) %>%
+  ggplot() +
+  geom_bar(aes(x = year_level, y = meanlenword, fill = genre), stat = "identity")
+```
+
+From the plot, we can see that not only the length of songs decreased a little bit during the climax period, but also the length of word also decreased a little bit during the climax. A possible guess would be because there are two many songs been created those years, so the average time spent to each song by listener or writer will be decreased, so they tend to have shorted songs and relatively easy and shorter words in the song. 
+
+
+## Question2: What are the most frequently used words?
+```{r,echo = FALSE, warning = FALSE}
 t1<-word_tibble %>% 
-  mutate(n = nchar(word)) %>% 
-  group_by(id) %>% 
-  mutate(meanlen = mean(n)) %>%
-  select(id, meanlen) %>%
-  unique()
-t2<- dt_lyrics %>% left_join(t1, by = "id")
-t3<-t2 %>% group_by(genre) %>%
-  mutate(meanlenfortype = mean(meanlen, na.rm = TRUE)) %>%
-  select(genre, meanlenfortype) %>%
-  unique() %>%
-  arrange(meanlenfortype)
-meanlen = mean(t3$meanlenfortype)
-varlen = var(t3$meanlenfortype)
-t3 %>%
-  mutate(k = (meanlenfortype-meanlen)/varlen) %>%
-  arrange(k) %>%
-  ggplot(aes(x = genre, y = k)) +
-  geom_point()
-```
-
-Question 2: 
-```{r}
-View(dt_lyrics)
-View(word_tibble)
-
-t4<-word_tibble %>% 
-  group_by(id) %>%
-  summarise(count = n())
-t5<-word_tibble %>% 
-  mutate(loveyes = 0) %>%
-  filter(word =="love") %>%
-  mutate(loveyes = 1) %>%
-  group_by(id) %>%
-  summarise(count = n())
-t6<-t4 %>% left_join(t5, by = "id")
-t7<-dt_lyrics %>% 
-  left_join(t6, by = "id") %>%
-  group_by(genre) %>%
-  summarise(n1 = sum(count.x, na.rm = TRUE), n2 = sum(count.y, na.rm = TRUE)) %>%
-  mutate(freq = n2/n1)
-t7 %>%
-  ggplot(aes(x = genre, y = freq)) +
-  geom_point()
+  left_join(df1, by = "id") %>%
+  group_by(year_level) %>%
+  count(word, sort = TRUE) %>%
+  ungroup() %>%
+  mutate(word = reorder(word,n)) 
 ```
 
 
+```{r, fig.height=4, fig.width=4, warning=FALSE, message =FALSE, echo = FALSE}
+#pre
+t2<-t1%>%
+  filter(year_level == "pre")
+t2%>%
+  top_n(10) %>%
+  ggplot() +
+  geom_bar(aes(x = word, y = n), stat = "identity")+
+  ggtitle("for pre") +
+  xlab("word") +
+  ylab("count")
+wordcloud(words = t2$word, freq = t2$n, min.freq = 1,
+          max.words=100, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
 
+
+#climax
+t3<-t1%>%
+  filter(year_level == "climax")
+t3%>%
+  top_n(10) %>%
+  ggplot() +
+  geom_bar(aes(x = word, y = n), stat = "identity") +
+  ggtitle("for climax") +
+  xlab("word") +
+  ylab("count")
+wordcloud(words = t3$word, freq = t2$n, min.freq = 1,
+          max.words=100, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+#stable
+t4<-t1%>%
+  filter(year_level == "stable")
+t4%>%
+  top_n(10) %>%
+  ggplot() +
+  geom_bar(aes(x = word, y = n), stat = "identity") +
+  ggtitle("for stable") +
+  xlab("word") +
+  ylab("count")
+wordcloud(words = t4$word, freq = t2$n, min.freq = 1,
+          max.words=100, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+```
+
+We noticed that the highly frequent words are almost the same for the three time periods. However, if we take a look of slightly lower rank of frequency, we can see some change for the stable period which is closer to the current years. This might indicates that the mainly used words did not change a lot for over time period, but for more recent year, some uses of words has slightly changed, which cause the slight change of frequency and wordcloud. 
+
+## Question 3: Are the emotions expressed in the songs more positive or more negative?
+
+From the top 50 frequency words of each time period, I did a classification of those words based on the emotion they expressed. There are three types, positive emotion, negative emotion, and non-emotion, and we only care about the first two types in our projects. 
+
+```{r, echo = FALSE, warning=FALSE}
+positive = c("love", "baby", "heart", "friend")
+negative = c("ill", "cry", "die", "lie", "hard", "leave", "fall", "trouble")
+t5<-t1 %>%
+  mutate(word = as.character(word)) %>%
+  mutate(emotiontype = 0)
+for (i in 1:164031){
+  if (t5[i,2] %in% positive){
+    t5[i,4] = 1
+  }
+  else if(t5[i,2] %in% negative){
+    t5[i,4] = -1
+  }
+}
+t5 %>% 
+  group_by(year_level,emotiontype) %>%
+  summarise(count = sum(n)) %>%
+  filter(emotiontype != 0) %>%
+  ggplot() +
+  geom_bar(aes(x = year_level, y = count, fill = emotiontype), stat = "identity")
+```
+
+From the plot, we notice that in each time period, positive emotional words has a larger proportion than nagetive emotional words. This result matches the wordcloud we saw previously becase "love" always has the highest frequency and is classified as a positive emotional word. From the plot, we can also see that negative emotion takes a slightly larger proportion during the climax period. 
+
+## Summary
+
+Based on change of the number of songs, we separate the years into three period which is pre, climax, and stable. We notice that the proportion of each genre are different in these three time period. Then we find out that the length of the song and the length of words used in the climax period are relatively shorter than the other two period. Next, we can conclude that the highly frequent used words did not change along time, but for more recent years, some new words started to show up more which caused the slight different of wordcloud. Finally, from the emotional words perpective, we can see that positive emotions always play a more dominant role in songs but the rate of negative words did increased a little bit during the climax period.
+
+![](/Users/apple/Documents/GitHub/Spring2020-Project1-VikkiSui1129/figs/title.png) 
